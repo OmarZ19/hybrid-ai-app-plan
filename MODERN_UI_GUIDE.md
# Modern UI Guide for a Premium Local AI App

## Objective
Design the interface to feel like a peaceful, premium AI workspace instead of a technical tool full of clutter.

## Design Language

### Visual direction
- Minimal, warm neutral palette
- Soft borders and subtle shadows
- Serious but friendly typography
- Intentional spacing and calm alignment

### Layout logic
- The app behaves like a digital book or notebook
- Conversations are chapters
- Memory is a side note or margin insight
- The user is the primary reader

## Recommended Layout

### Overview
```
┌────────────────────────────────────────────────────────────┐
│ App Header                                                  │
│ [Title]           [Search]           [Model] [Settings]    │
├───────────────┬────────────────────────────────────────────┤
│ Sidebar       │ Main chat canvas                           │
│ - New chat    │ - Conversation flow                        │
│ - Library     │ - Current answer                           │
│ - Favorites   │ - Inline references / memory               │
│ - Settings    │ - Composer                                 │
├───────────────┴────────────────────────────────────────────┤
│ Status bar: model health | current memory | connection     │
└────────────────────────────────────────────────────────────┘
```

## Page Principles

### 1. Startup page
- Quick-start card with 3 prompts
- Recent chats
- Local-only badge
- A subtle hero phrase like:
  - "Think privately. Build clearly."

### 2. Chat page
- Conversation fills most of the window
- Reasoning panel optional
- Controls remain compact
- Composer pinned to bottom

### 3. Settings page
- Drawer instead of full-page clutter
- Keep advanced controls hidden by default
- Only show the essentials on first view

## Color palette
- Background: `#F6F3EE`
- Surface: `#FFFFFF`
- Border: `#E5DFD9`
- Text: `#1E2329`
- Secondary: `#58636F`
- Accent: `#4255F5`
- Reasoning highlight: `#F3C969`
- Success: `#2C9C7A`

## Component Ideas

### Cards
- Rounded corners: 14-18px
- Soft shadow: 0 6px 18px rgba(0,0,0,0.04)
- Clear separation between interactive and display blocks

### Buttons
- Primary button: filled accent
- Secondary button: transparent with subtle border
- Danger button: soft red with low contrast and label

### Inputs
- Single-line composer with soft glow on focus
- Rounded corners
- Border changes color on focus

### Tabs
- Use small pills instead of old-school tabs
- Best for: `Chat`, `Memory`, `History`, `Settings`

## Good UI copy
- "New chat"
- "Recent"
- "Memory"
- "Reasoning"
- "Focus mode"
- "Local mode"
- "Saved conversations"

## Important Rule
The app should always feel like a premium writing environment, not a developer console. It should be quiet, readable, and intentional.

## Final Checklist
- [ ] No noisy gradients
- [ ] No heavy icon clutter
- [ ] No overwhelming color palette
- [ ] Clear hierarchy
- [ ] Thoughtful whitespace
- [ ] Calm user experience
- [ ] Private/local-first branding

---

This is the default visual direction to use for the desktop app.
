@@ -1,0 +1,116 @@
+# Design Guide
+
+## Vision
+The app should feel like a premium, calm, modern AI workspace: a little like Notion + ChatGPT + local desktop app. The user should feel trust, clarity, and speed.
+
+## Core UX Principles
+
+### 1. Less is more
+- Never overload the screen with controls
+- Keep every page focused on one task
+- Use whitespace intentionally
+- Hide advanced controls behind a compact Settings drawer
+
+### 2. The page should feel like a book, not a dashboard
+- Left sidebar = book/library/collections
+- Center = main reading/writing surface
+- Right sidebar = optional context or reasoning
+- Use a strong typography system instead of colorful clutter
+
+### 3. Trust and clarity
+- Show reasoning only when the user asks for it
+- Let the user toggle visibility of reasoning and memory
+- Label things clearly: `Reasoning`, `Final Answer`, `Memory`, `Context`
+
+## Recommended Layout
+
+### Main App Shell
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ Header: Title | Search | Model Status | Settings                     │
+├───────────────────────┬──────────────────────────────────────────────┤
+│ Sidebar               │ Main content area                             │
+│ - Conversations       │ - Current chat                                 │
+│ - Folders             │ - Message stream                              │
+│ - Quick prompts       │ - Reasoning panel (optional)                  │
+│ - Settings shortcuts  │ - Input composer                              │
+├───────────────────────┴──────────────────────────────────────────────┤
+│ Footer: Local status | memory usage | model health | connection state │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+## Visual Style
+
+### Color system
+- Background: warm white / soft gray (#F7F5F2)
+- Card: white (#FFFFFF)
+- Border: subtle gray (#E8E3DE)
+- Primary: deep slate/ink (#1F2937)
+- Accent: muted blue (#496BFF) or muted sage (#3C6E71)
+- Warning: amber (#D97706)
+- Success: green (#1F8A70)
+
+### Typography
+- Use `Inter`, `Segoe UI`, or `SF Pro Display`
+- Headings: medium weight, strong spacing
+- Body: comfortable readability
+- Use clean sentence case
+
+### Motion
+- Use subtle animation only
+- 150-220ms transitions
+- Smooth panel slide-ins
+- Avoid flashy or noisy effects
+
+## UI Patterns
+
+### 1. Chat bubble system
+- User messages: soft slate or blue fill, subtle shadow
+- AI messages: white cards with thin border
+- Reasoning messages: muted amber or gray panels
+
+### 2. Compact controls
+- Keep controls near the composer
+- Use icon buttons with labels only when necessary
+- Model selection in a compact dropdown
+
+### 3. Memory panel
+- Show `Relevant memories`, `Recent context`, `Known facts`
+- Keep it visible but secondary
+
+### 4. Empty state
+- When no conversation exists, show:
+  - `New conversation`
+  - 4 quick prompts
+  - `Local-only private mode`
+
+## Modern App Features That Matter
+- Dark mode toggle
+- Compact mode / focus mode
+- Real-time memory insights
+- Reasoning panel toggle
+- Streamed response animation
+- Smooth conversation switching
+- Private local mode indicator
+
+## Recommended Page Flow
+
+### Page 1: Start screen
+- App title
+- Small welcome text
+- Quick prompt chips
+- Recent conversations
+
+### Page 2: Main workspace
+- Chat area center
+- Sidebar conversations
+- Optional reasoning pane
+
+### Page 3: Settings drawer
+- Model config
+- Memory settings
+- Local database status
+- Export/import conversations
+
+## Final Rule
+If the UI looks too busy, remove something. The app should feel calm, private, and premium.

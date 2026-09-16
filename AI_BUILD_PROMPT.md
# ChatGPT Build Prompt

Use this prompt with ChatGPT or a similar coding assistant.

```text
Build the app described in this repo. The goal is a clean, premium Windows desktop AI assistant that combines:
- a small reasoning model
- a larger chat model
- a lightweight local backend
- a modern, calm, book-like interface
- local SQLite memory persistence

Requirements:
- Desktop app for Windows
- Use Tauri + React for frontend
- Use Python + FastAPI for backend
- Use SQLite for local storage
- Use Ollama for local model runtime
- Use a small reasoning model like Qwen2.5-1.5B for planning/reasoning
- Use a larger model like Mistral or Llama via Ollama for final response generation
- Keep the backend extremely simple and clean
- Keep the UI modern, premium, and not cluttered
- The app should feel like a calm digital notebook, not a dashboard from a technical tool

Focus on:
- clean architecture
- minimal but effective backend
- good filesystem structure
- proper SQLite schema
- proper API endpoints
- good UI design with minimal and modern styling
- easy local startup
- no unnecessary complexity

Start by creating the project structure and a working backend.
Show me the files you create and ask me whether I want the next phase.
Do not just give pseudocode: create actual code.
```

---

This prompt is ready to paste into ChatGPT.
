@@ -1,0 +1,109 @@
+# Best Practices for a Clean, Effective Local AI App
+
+## Backend principles
+
+### Keep it simple
+- One FastAPI service
+- One SQLite database
+- One orchestrator for the model pipeline
+- One clear flow: request → reason → answer → store
+
+### Prefer deterministic structure
+- Clear request/response models
+- Clean endpoint naming
+- Pure functions where possible
+- Large logic should live in dedicated service files
+
+### Avoid complexity early
+- Do not build a giant plugin system before the app works
+- Do not add multi-agent orchestration on day one
+- Do not add external services until needed
+
+## Reasoning and chat pipeline
+
+### Best pattern
+Use a small model only for:
+- planning
+- summarization
+- decomposition
+- memory selection
+- confidence checks
+
+Use the large model only for:
+- final natural speech generation
+- writing polished responses
+- high-quality synthesis
+
+This keeps inference efficient and effective.
+
+## Memory strategy
+
+### Recommended memory model
+- Recent conversations: always present
+- Relevant facts: retrieved semantically
+- Stable facts: stored in a lightweight memory table
+- Summary layer: kept concise and compact
+
+### Store only what matters
+- names
+- user preferences
+- important facts
+- decisions
+- repeated topics
+
+Do not store noisy filler text.
+
+## Database strategy
+
+### SQLite is enough for Phase 1
+Use tables like:
+- conversations
+- messages
+- memory_entries
+- reasoning_traces
+
+### Keep schema simple
+- `id`, `created_at`, `updated_at`
+- `conversation_id`, `role`, `content`
+- `metadata` JSON for optional structure
+
+## UI strategy
+
+### Make it calm and readable
+- Use neutral colors
+- Avoid heavy dark themes unless optional
+- Focus on typography and layout
+- Keep controls minimal
+
+### Good default behavior
+- Show reasoning only when toggled
+- Always keep conversation visible
+- Minimize visual noise around the composer
+
+## Performance
+
+### Good defaults
+- Keep local model inference simple and single-threaded first
+- Use caching for repeated prompts
+- Batch only when necessary
+- Keep the memory system lightweight and local
+
+### Fail gracefully
+- If the model fails, return a friendly fallback error
+- Show an error in UI without crashing the app
+
+## Maintainability
+
+### File naming
+- clear and consistent names
+- avoid giant monolithic files
+- keep API routes separate from model logic
+
+### Good practice
+- Add a small `README` inside each major folder
+- Use type hints in Python
+- Use TypeScript types in frontend
+- Keep comments short and useful
+
+## Final recommendation
+Build the app in a way that is clean, calm, and modular. Make the backend simple enough that a future developer can understand it in one pass.
