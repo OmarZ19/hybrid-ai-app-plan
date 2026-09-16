@@ -1,0 +1,364 @@
+# Production Roleplay Requirements
+
+## Purpose
+
+This document consolidates the most important production requirements for the roleplay-focused app. The app should be safe, consistent, editable, and robust before it is considered production-ready.
+
+## Core design principles
+
+1. Structured turns are canonical.
+2. Characters, lore, and memories are separate domains.
+3. Users must be able to modify, branch, and roll back scenes.
+4. Memory is evidence-based and reversible.
+5. The app should be local-first and private by default.
+6. Streaming is required for good usability.
+7. The app must degrade gracefully when structured generation fails.
+
+---
+
+## 1. Structured streaming
+
+The frontend must stream partial generation results as they arrive.
+
+### Required event flow
+
+```text
+generation_started
+turn_started
+turn_delta
+narrator_delta
+turn_completed
+cast_update
+memory_update
+generation_completed
+```
+
+### Rules
+
+- Show the first character turn as soon as a valid speaker is known.
+- Render narrative prose immediately after the relevant speaker turn.
+- Never mix partial narration into a partially rendered dialogue bubble.
+- Keep event ordering stable even if model output arrives out of order.
+- Allow the user to stop generation at any time.
+- If generation is cancelled, discard incomplete partial turns and preserve only valid committed turns.
+
+### UI behavior
+
+- A `Generating...` indicator is shown for the current response.
+- The user sees the narration appear immediately after the speaker turn.
+- Partial responses remain clearly marked as interim until the final turn sequence is validated.
+
+---
+
+## 2. Turn editing and regeneration rules
+
+Editing an earlier message must invalidate later derived state.
+
+### Required behavior
+
+When the user edits a message:
+
+1. Mark later turns, memories, and summaries as stale.
+2. Recompute downstream context from the edited point.
+3. Reevaluate speaker attribution and cast updates.
+4. Rebuild all summaries that depend on the edited segment.
+5. Preserve historical versions as a branch or checkpoint.
+6. Show the user whether a later branch was created or a regeneration was triggered.
+
+### Developer requirement
+
+The system must track a `turn_revision_id` for each frame of the story. Regenerating a later segment should not silently overwrite earlier verified text.
+
+---
+
+## 3. Branching and rollback
+
+Roleplay systems are iterative by nature. Branching is essential.
+
+### Required features
+
+- Save a checkpoint at the current state.
+- Restore a previous checkpoint.
+- Branch from any turn.
+- Keep the main branch and side branches separately.
+- Compare branch summaries.
+- Offer restore and merge operations only when they are safe.
+- Archive abandoned branches instead of deleting them without a warning.
+
+### Branch data
+
+A branch snapshot should include:
+
+- conversation state
+- turn sequence
+- cast state
+- lorebook entries used
+- summary version
+- active memories
+- open threads
+- world state
+- unrelated settings
+
+---
+
+## 4. Memory conflict resolution
+
+Memory should be evidence-driven, reversible, and manageable.
+
+### Required rules
+
+When a newer fact conflicts with an older fact:
+
+- keep the evidence trail for both sides
+- mark the older fact as superseded or stale
+- prefer the newer fact only if it is validated or user-confirmed
+- preserve the earlier fact for search and audit
+- allow the user to override the system's choice
+
+### Example
+
+```text
+Old memory: Jade lives in the eastern district.
+New memory: Jade moved to the western district.
+```
+
+The app should not silently delete the old fact. It should create a status update:
+
+```text
+Superseded by newer evidence from message 147.
+```
+
+### Memory statuses
+
+- active
+- stale
+- superseded
+- rejected
+- user-confirmed
+- provisional
+- merged
+
+---
+
+## 5. Narrator semantics and scene state
+
+Narrator turns should not always be implied to follow a character. Some narration describes the world, environment, pacing, time, or consequences without a single speaker.
+
+### Required attributes
+
+```json
+{
+  "type": "narrator",
+  "text": "Thunder rolls beyond the windows.",
+  "related_speaker_ids": [],
+  "scene_effect": true,
+  "follows_turn_id": "turn-42"
+}
+```
+
+### Rules
+
+- Narrator turns can be scene-level and disconnected from a specific speaker.
+- Character dialogue should never be rendered inside narrator style.
+- A narrator turn may follow a character turn, but it should not always do so.
+- Name tags and scene cues must remain separate from the dialogue bubble.
+
+---
+
+## 6. Prompt and content safety separation
+
+Imported characters, lorebooks, and prior conversation text may include instructions. They are **not** system instructions.
+
+### Required separation
+
+```text
+SYSTEM RULES
+CHARACTER DEFINITIONS
+LOREBOOK ENTRIES
+MEMORY FACTS
+SCENE STATE
+CURRENT USER INPUT
+```
+
+### Rules
+
+- App rules always have highest priority.
+- Prompt-embedded instructions from imported content never override safety policies.
+- Character cards and lorebooks remain user-authored story data.
+- The system must validate and redact untrusted content before insertion.
+
+---
+
+## 7. Conversation locking and concurrency
+
+Only one generation job should be active per conversation by default.
+
+### Required behavior
+
+- One response generation per conversation at a time
+- Ability to stop generation
+- Request IDs and generation tokens
+- Safe cancellation cleanup
+- Retry logic with backoff for transient provider issues
+- Clear UI warning when a prior generation is still in progress
+
+### Concurrency risks
+
+- multiple background memory jobs overwriting each other
+- duplicate speaker attribution runs
+- branch updates racing each other
+- two generations writing the same conversation state
+
+The backend must serialize writes by conversation ID.
+
+---
+
+## 8. Native model-provider abstraction
+
+The app cannot hard-code a single model stack.
+
+### Minimum provider capabilities
+
+- structured output
+- streaming
+- context-length awareness
+- stop generation
+- health check
+- model metadata
+- fallback on provider failure
+
+### Supported providers may include
+
+- Ollama
+- llama.cpp server
+- LM Studio
+- OpenAI-compatible API
+- Azure OpenAI compatibility
+- embedded local reasoning model plus remote host model
+
+### Default configuration
+
+Default local flow:
+
+- local reasoning model for planning and memory extraction if enabled
+- local chat model for final roleplay output
+- SQLite as the default storage layer
+- no required external vector database
+
+---
+
+## 9. Backup and migration system
+
+The app must support migration-safe saves.
+
+### Data included in a backup
+
+- conversations
+- turn log
+- cast entries
+- memory entries
+- summaries
+- world state
+- lorebooks
+- character cards
+- settings without secrets
+- skill versions
+- checkpoint metadata
+
+### Requirements
+
+- schema version included in every backup
+- backup before migration
+- migration warnings shown to the user
+- partial restore supported when safe
+- import validation before writing
+
+---
+
+## 10. Privacy controls
+
+The app should be private by default.
+
+### Required settings
+
+- Local-only mode
+- Clear current conversation
+- Clear all memories
+- Export selected memories only
+- Disable memory extraction
+- Disable automatic summaries
+- Disable telemetry by default
+- Exclude secrets from export
+- Password-protected or encrypted local storage optional
+
+---
+
+## 11. Memory quality dashboard
+
+The app should be able to measure whether memory works.
+
+### Metrics to include
+
+- memory recall rate
+- wrong-memory rate
+- summary compression ratio
+- prompt token savings
+- character consistency score
+- relationship consistency score
+- lore activation precision
+- speaker attribution accuracy
+- latency per response
+
+These should be visible in a debug/benchmark panel, not hidden in logs.
+
+---
+
+## 12. Recommended final architecture
+
+```text
+User input
+  ↓
+Context builder
+  ├─ active cast
+  ├─ relevant lore
+  ├─ memory retrieval
+  ├─ world state
+  ├─ summary
+  ├─ current scene
+  └─ active skill(s)
+  ↓
+Response planner
+  ├─ speaker selection
+  ├─ narration triggers
+  ├─ max-speaker policy
+  └─ structured turn schema
+  ↓
+Model provider
+  ↓
+Turn normalizer
+  ↓
+Database write + memory extraction + summary update
+  ↓
+UI render
+  ├─ UserTurn
+  ├─ CharacterTurn
+  ├─ NarratorTurn
+  └─ turn grouping
+```
+
+---
+
+## Final delivery standard
+
+The app is production-ready only when it can do all of the following without corrupting story continuity:
+
+- stream multi-speaker roleplay responses correctly
+- preserve separate user, character, and narrator turns
+- allow editing and rollback safely
+- resolve memory conflicts without data loss
+- maintain local-only privacy defaults
+- export and restore complete sessions safely
+- handle concurrency and cancellation correctly
+- show the user what memory was retrieved and why
+
+This is the bar the project should meet before being described as robust.
